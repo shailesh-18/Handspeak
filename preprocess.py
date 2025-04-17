@@ -5,18 +5,18 @@ import os
 import pickle
 import warnings
 
-
+# 🔧 Disable TensorFlow Lite warnings
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["TF_LITE_DISABLE_XNNPACK"] = "1"
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # Initialize MediaPipe Hands
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.5)  # Increased confidence
+hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.2)  # Adjusted for better detection
 mp_draw = mp.solutions.drawing_utils
 
-
-DATASET_PATH = r"C:\Users\khush\Sem 6\HandSpeak\ASL hand recognition\dataset\asl_alphabet_train\asl_alphabet_train"
+# 🔹 Correct dataset path
+DATASET_PATH = r"C:\Users\khush\Sem 6\HandSpeak\ASL hand recognition\dataset\asl_alphabet_train"
 
 # Ensure the dataset path exists
 if not os.path.exists(DATASET_PATH):
@@ -25,12 +25,16 @@ if not os.path.exists(DATASET_PATH):
 
 # Get gesture labels (A-Z folders)
 labels = [folder for folder in sorted(os.listdir(DATASET_PATH)) if os.path.isdir(os.path.join(DATASET_PATH, folder))]
+
+if not labels:
+    print("❌ ERROR: No valid gesture folders found in the dataset.")
+    exit()
+
 print(f"📂 Found {len(labels)} gesture classes: {labels}")
 
 # Prepare dataset
 X = []  # Features (hand landmarks)
 y = []  # Labels (gesture classes)
-total_images = 0  # Count total processed images
 
 for label in labels:
     label_path = os.path.join(DATASET_PATH, label)
@@ -47,16 +51,12 @@ for label in labels:
             print(f"❌ ERROR: Unable to read image {img_path}, skipping...")
             continue
 
-        # Resize image to improve hand detection
-        img_rgb = cv2.resize(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), (640, 480))
-
-        # Process image for hand landmarks
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         result = hands.process(img_rgb)
 
         # Debugging: Check if hands are detected
         if result.multi_hand_landmarks:
             print(f"✅ Hand detected in {img_name}")
-            total_images += 1
             for hand_landmarks in result.multi_hand_landmarks:
                 landmarks = []
                 for lm in hand_landmarks.landmark:
@@ -83,4 +83,3 @@ with open(pkl_path, "wb") as f:
     pickle.dump((X, y), f)
 
 print(f"✅ Dataset processed and saved successfully! ({pkl_path})")
-print(f"📊 Total processed images: {total_images}")
